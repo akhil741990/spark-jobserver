@@ -212,7 +212,7 @@ class WebApi(system: ActorSystem,
     cors {
       overrideMethodWithParameter("_method") {
         binaryRoutes ~ contextRoutes ~ jobRoutes ~
-          dataRoutes ~ healthzRoutes ~ otherRoutes
+          dataRoutes ~ healthzRoutes ~ otherRoutes ~ activeContextRoutes
       }
     }
   }
@@ -416,7 +416,55 @@ class WebApi(system: ActorSystem,
       dataRoutes(dataManager)
     }
   }
-
+  /**
+   * Routes for listing, deletion of and storing data files
+   *    GET /active-contexts                     - lists all active contexts
+   *    GET /active-contexts/<contextName>       -  check if the context is active
+   * @author Akhil Pillai
+   */
+  def activeContextRoutes: Route = pathPrefix("active-contexts") {
+    // user authentication
+    authenticate(authenticator) { authInfo =>
+      (get & path(Segment)) { contextName =>
+        val timer = contextGetSingle.time()
+        respondWithMediaType(MediaTypes.`application/json`) { ctx =>
+          val future = (supervisor ? GetSparkContexData(contextName))(15.seconds)
+          future.map {
+            case SparkContexData(context, appId, url) =>
+              val contextMap = getContextReport(context, appId, url)
+              ctx.complete(StatusCodes.OK, contextMap)
+            case NoSuchContext =>
+              completeWithErrorStatus(ctx, s"can't find context with name $contextName", StatusCodes.NotFound)
+            case UnexpectedError => completeWithErrorStatus(
+              ctx, "UNEXPECTED ERROR OCCURRED", StatusCodes.InternalServerError)
+          }.recover {
+            case e: Exception =>
+              completeWithException(ctx, "ERROR", StatusCodes.InternalServerError, e)
+          }.andThen{
+            case _ => timer.stop()
+          }
+        }
+      } ~
+      get { ctx =>
+        val timer = contextGet.time()
+        val future = supervisor ? ListContexts
+        future.map {
+          case UnexpectedError => completeWithErrorStatus(
+            ctx, "UNEXPECTED ERROR OCCURRED", StatusCodes.InternalServerError)
+          case contexts =>
+            val getContexts = SparkJobUtils.removeProxyUserPrefix(
+              authInfo.toString, contexts.asInstanceOf[Seq[String]],
+              config.getBoolean("shiro.authentication") && config.getBoolean("shiro.use-as-proxy-user"))
+            ctx.complete(getContexts)
+        }.recover {
+          case e: Exception =>
+            completeWithException(ctx, "ERROR", StatusCodes.InternalServerError, e)
+        }.andThen {
+          case _ => timer.stop()
+        }
+      }
+    }
+  }
   /**
    * Routes for listing, adding, and stopping contexts
    *     GET /contexts         - lists all current contexts
