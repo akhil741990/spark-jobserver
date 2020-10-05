@@ -447,7 +447,7 @@ class WebApi(system: ActorSystem,
       } ~
       get { ctx =>
         val timer = contextGet.time()
-        val future = supervisor ? ListContexts
+        val future = supervisor ? ListActiveContexts
         future.map {
           case UnexpectedError => completeWithErrorStatus(
             ctx, "UNEXPECTED ERROR OCCURRED", StatusCodes.InternalServerError)

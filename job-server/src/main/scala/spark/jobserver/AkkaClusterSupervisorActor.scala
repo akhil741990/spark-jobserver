@@ -241,6 +241,15 @@ class AkkaClusterSupervisorActor(daoActor: ActorRef, dataManagerActor: ActorRef,
         case None => sender ! UnexpectedError
       }
 
+      case ListActiveContexts =>
+      val resp = getDataFromDAO[JobDAOActor.ContextInfos](
+          JobDAOActor.GetContextInfos(None, Some(
+              Seq(ContextStatus.Running, ContextStatus.Restarting, ContextStatus.Stopping))))
+      resp match {
+        case Some(JobDAOActor.ContextInfos(contextInfos)) => sender ! contextInfos.map(_.name)
+        case None => sender ! UnexpectedError
+      }
+
     case GetSparkContexData(name) =>
       val originator = sender
       val resp = getContextByName(name)

@@ -25,6 +25,7 @@ object ContextSupervisor {
   // Messages/actions
   case object AddContextsFromConfig // Start up initial contexts
   case object ListContexts
+  case object ListActiveContexts
   case class AddContext(name: String, contextConfig: Config)
   case class StartAdHocContext(mainClass: String, contextConfig: Config)
   case class GetContext(name: String) // returns JobManager, JobResultActor
@@ -102,6 +103,9 @@ class LocalContextSupervisorActor(dao: ActorRef, dataManagerActor: ActorRef) ext
       addContextsFromConfig(config)
 
     case ListContexts =>
+      sender ! contexts.keys.toSeq
+
+   case ListActiveContexts =>
       sender ! contexts.keys.toSeq
 
     case GetSparkContexData(name) =>
