@@ -50,6 +50,8 @@ object JobDAOActor {
   case class GetContextInfoByName(name: String) extends JobDAORequest
   case class GetContextInfos(limit: Option[Int] = None,
       statuses: Option[Seq[String]] = None) extends JobDAORequest
+  case class GetActiveContextInfos(limit: Option[Int] = None,
+      statuses: Option[Seq[String]] = None) extends JobDAORequest
   case class GetJobsByBinaryName(appName: String, statuses: Option[Seq[String]] = None) extends JobDAORequest
   case class GetBinaryInfosForCp(cp: Seq[String]) extends JobDAORequest
 
@@ -142,6 +144,11 @@ class JobDAOActor(metaDataDAO: MetaDataDAO, binaryDAO: BinaryDAO, config: Config
       }.map(ContextResponse).pipeTo(sender)
 
     case GetContextInfos(limit, statuses) =>
+      Utils.timedFuture(contextList){
+        metaDataDAO.getContexts(limit, statuses)
+      }.map(ContextInfos).pipeTo(sender)
+
+    case GetActiveContextInfos(limit, statuses) =>
       Utils.timedFuture(contextList){
         metaDataDAO.getContexts(limit, statuses)
       }.map(ContextInfos).pipeTo(sender)
