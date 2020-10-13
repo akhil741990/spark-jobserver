@@ -245,7 +245,7 @@ class AkkaClusterSupervisorActor(daoActor: ActorRef, dataManagerActor: ActorRef,
       val resp = getDataFromDAO[JobDAOActor.JobInfos](
           JobDAOActor.GetJobInfos(10, Some(JobStatus.Running)))
       resp match {
-        case Some(JobDAOActor.JobInfos(contextInfos)) => sender ! contextInfos.map(_.contextName)
+        case Some(JobDAOActor.JobInfos(jobInfos)) => sender ! jobInfos.map(_.contextName)
         case None => sender ! UnexpectedError
       }
 
