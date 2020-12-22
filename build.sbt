@@ -3,6 +3,9 @@ import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys.MultiJvm
 
 import Dependencies._
 
+
+scalaVersion := "2.13.0"
+
 updateOptions := updateOptions.value.withCachedResolution(true)
 transitiveClassifiers in Global := Seq(Artifact.SourceClassifier)
 lazy val dirSettings = Seq()
